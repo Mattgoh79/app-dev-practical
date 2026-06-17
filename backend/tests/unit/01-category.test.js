@@ -33,7 +33,8 @@ describe("Category Controller", () => {
       expect(res.json.calledOnce).to.be.true;
 
       const body = res.json.firstCall.args[0];
-      expect(body.data.name).to.equal("Otago");    });
+      expect(body.data.name).to.equal("Otago");    
+    });
   });
 
   // -----------------------------------------------------------------------
