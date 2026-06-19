@@ -61,7 +61,21 @@ describe("Quiz Controller", () => {
     });
 
     it("returns 404 when the specified category does not exist", async () => {
-      // Write your test code here
+      sinon.stub(categoryRepository, "findById").resolves(null);
+
+      const req = mockReq({
+        title: "quiz",
+        categoryId: "31312",
+      });
+      const res = mockRes();
+
+      await quizController.createQuiz(req, res);
+
+      expect(res.status.calledWith(404)).to.be.true;
+      expect(res.json.calledOnce).to.be.true;
+
+      const body = res.json.firstCall.args[0];
+      expect(body.message).to.equal("No category with the id: 31312 found");
     });
   });
 
@@ -70,11 +84,38 @@ describe("Quiz Controller", () => {
   // -----------------------------------------------------------------------
   describe("getQuizzes", () => {
     it("returns 200 and an array of quizzes when quizzes exist", async () => {
-      // Write your test code here
+      const quizzes = [
+        { id: 1, title: "quiz one", categoryId: 31312 },
+        { id: 2, title: "quiz two", categoryId: 31313 },
+      ];
+
+      sinon.stub(quizRepository, "findAll").resolves(quizzes);
+
+      const req = mockReq();
+      const res = mockRes();
+
+      await quizController.getQuizzes(req, res);
+
+      expect(res.status.calledWith(200)).to.be.true;
+      expect(res.json.calledOnce).to.be.true;
+
+      const body = res.json.firstCall.args[0];
+      expect(body.data).to.deep.equal(quizzes);
     });
 
     it("returns 404 when no quizzes exist", async () => {
-      // Write your test code here
+      sinon.stub(quizRepository, "findAll").resolves([]);
+
+      const req = mockReq();
+      const res = mockRes();
+
+      await quizController.getQuizzes(req, res);
+
+      expect(res.status.calledWith(404)).to.be.true;
+      expect(res.json.calledOnce).to.be.true;
+
+      const body = res.json.firstCall.args[0];
+      expect(body.message).to.equal("No quizzes found");
     });
   });
 
@@ -83,11 +124,35 @@ describe("Quiz Controller", () => {
   // -----------------------------------------------------------------------
   describe("getQuiz", () => {
     it("returns 200 and the quiz when it is found", async () => {
-      // Write your test code here
+      const quiz = { id: 1, title: "quiz", categoryId: 31312 };
+
+      sinon.stub(quizRepository, "findById").resolves(quiz);
+
+      const req = mockReq({}, { id: "1" });
+      const res = mockRes();
+
+      await quizController.getQuiz(req, res);
+
+      expect(res.status.calledWith(200)).to.be.true;
+      expect(res.json.calledOnce).to.be.true;
+
+      const body = res.json.firstCall.args[0];
+      expect(body.data).to.deep.equal(quiz);
     });
 
     it("returns 404 when the quiz is not found", async () => {
-      // Write your test code here
+      sinon.stub(quizRepository, "findById").resolves(null);
+
+      const req = mockReq({}, { id: "1" });
+      const res = mockRes();
+
+      await quizController.getQuiz(req, res);
+
+      expect(res.status.calledWith(404)).to.be.true;
+      expect(res.json.calledOnce).to.be.true;
+
+      const body = res.json.firstCall.args[0];
+      expect(body.message).to.equal("No quiz with the id: 1 found");
     });
   });
 
@@ -96,11 +161,57 @@ describe("Quiz Controller", () => {
   // -----------------------------------------------------------------------
   describe("updateQuiz", () => {
     it("returns 200 and the updated quiz when the quiz exists", async () => {
-      // Write your test code here
+      const existingQuiz = { id: 1, title: "old", categoryId: 31312 };
+      const updatedQuiz = { id: 1, title: "new", categoryId: 31312 };
+
+      sinon.stub(quizRepository, "findById").resolves(existingQuiz);
+      sinon.stub(quizRepository, "update").resolves(updatedQuiz);
+
+      const req = mockReq({ title: "new title" }, { id: "1" });
+      const res = mockRes();
+
+      await quizController.updateQuiz(req, res);
+
+      expect(res.status.calledWith(200)).to.be.true;
+      expect(res.json.calledOnce).to.be.true;
+
+      const body = res.json.firstCall.args[0];
+      expect(body.message).to.equal("Quiz with the id: 1 successfully updated");
+      expect(body.data).to.deep.equal(updatedQuiz);
     });
 
     it("returns 404 when the quiz to update is not found", async () => {
-      // Write your test code here
+      sinon.stub(quizRepository, "findById").resolves(null);
+
+      const req = mockReq({ title: "new title" }, { id: "1" });
+      const res = mockRes();
+
+      await quizController.updateQuiz(req, res);
+
+      expect(res.status.calledWith(404)).to.be.true;
+      expect(res.json.calledOnce).to.be.true;
+
+      const body = res.json.firstCall.args[0];
+      expect(body.message).to.equal("No quiz with the id: 1 found");
+    });
+
+    it("returns 400 when the new title matches the current title", async () => {
+      const existingQuiz = { id: 1, title: "same title", categoryId: 31312 };
+
+      sinon.stub(quizRepository, "findById").resolves(existingQuiz);
+      const updateStub = sinon.stub(quizRepository, "update");
+
+      const req = mockReq({ title: "same title" }, { id: "1" });
+      const res = mockRes();
+
+      await quizController.updateQuiz(req, res);
+
+      expect(res.status.calledWith(400)).to.be.true;
+      expect(res.json.calledOnce).to.be.true;
+      expect(updateStub.called).to.be.false;
+
+      const body = res.json.firstCall.args[0];
+      expect(body.message).to.equal("New title must be different from the current title");
     });
   });
 
@@ -109,11 +220,37 @@ describe("Quiz Controller", () => {
   // -----------------------------------------------------------------------
   describe("deleteQuiz", () => {
     it("returns 200 when the quiz is found and deleted", async () => {
-      // Write your test code here
+      const existingQuiz = { id: 1, title: "quiz", categoryId: 31312 };
+
+      sinon.stub(quizRepository, "findById").resolves(existingQuiz);
+      const deleteStub = sinon.stub(quizRepository, "delete").resolves();
+
+      const req = mockReq({}, { id: "1" });
+      const res = mockRes();
+
+      await quizController.deleteQuiz(req, res);
+
+      expect(deleteStub.calledWith(1)).to.be.true;
+      expect(res.status.calledWith(200)).to.be.true;
+      expect(res.json.calledOnce).to.be.true;
+
+      const body = res.json.firstCall.args[0];
+      expect(body.message).to.equal("Quiz with the id: 1 successfully deleted");
     });
 
     it("returns 404 when the quiz to delete is not found", async () => {
-      // Write your test code here
+      sinon.stub(quizRepository, "findById").resolves(null);
+
+      const req = mockReq({}, { id: "1" });
+      const res = mockRes();
+
+      await quizController.deleteQuiz(req, res);
+
+      expect(res.status.calledWith(404)).to.be.true;
+      expect(res.json.calledOnce).to.be.true;
+
+      const body = res.json.firstCall.args[0];
+      expect(body.message).to.equal("No quiz with the id: 1 found");
     });
   });
 });
